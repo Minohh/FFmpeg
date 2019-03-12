@@ -48,6 +48,7 @@ void ff_sad16_c(SAD_PARAMS);
 typedef void (*sad_fun)(SAD_PARAMS);
 
 void init_sad_fun_list(sad_fun sad_list[], int depth);
-/*******************        SAD           ********************/
+
+/********************   check weights     ********************/
 int check_weight_4_pixels(uint32_t *weights);
 #endif /* AVFILTER_INTERPOLATE_H */

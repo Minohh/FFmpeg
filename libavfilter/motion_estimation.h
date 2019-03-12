@@ -22,6 +22,7 @@
 #define AVFILTER_MOTION_ESTIMATION_H
 
 #include "libavutil/avutil.h"
+#include "interpolate.h"
 
 #define AV_ME_METHOD_ESA        1
 #define AV_ME_METHOD_TSS        2
@@ -43,6 +44,7 @@ typedef struct AVMotionEstContext {
     int linesize;
 
     int mb_size;
+    int log2_mb_size;
     int search_param;
 
     int width;
@@ -59,6 +61,7 @@ typedef struct AVMotionEstContext {
 
     uint64_t (*get_cost)(struct AVMotionEstContext *me_ctx, int x_mb, int y_mb,
                          int mv_x, int mv_y);
+    sad_fun sad_fun_list[4];
 } AVMotionEstContext;
 
 void ff_me_init_context(AVMotionEstContext *me_ctx, int mb_size, int search_param,
