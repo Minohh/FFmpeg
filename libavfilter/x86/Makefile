@@ -1,4 +1,5 @@
 OBJS-$(CONFIG_SCENE_SAD)                     += x86/scene_sad_init.o
+OBJS-$(CONFIG_SCENE_SAD)                     += x86/interpolate_init.o
 
 OBJS-$(CONFIG_AFIR_FILTER)                   += x86/af_afir_init.o
 OBJS-$(CONFIG_ANLMDN_FILTER)                 += x86/af_anlmdn_init.o
@@ -33,6 +34,7 @@ OBJS-$(CONFIG_W3FDIF_FILTER)                 += x86/vf_w3fdif_init.o
 OBJS-$(CONFIG_YADIF_FILTER)                  += x86/vf_yadif_init.o
 
 X86ASM-OBJS-$(CONFIG_SCENE_SAD)              += x86/scene_sad.o
+X86ASM-OBJS-$(CONFIG_SCENE_SAD)              += x86/interpolate.o
 
 X86ASM-OBJS-$(CONFIG_AFIR_FILTER)            += x86/af_afir.o
 X86ASM-OBJS-$(CONFIG_ANLMDN_FILTER)          += x86/af_anlmdn.o

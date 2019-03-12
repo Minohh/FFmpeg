@@ -1,0 +1,272 @@
+;*****************************************************************************
+;* x86-optimized functions for scene SAD
+;*
+;* Copyright (C) 2019 Minohh
+;*
+;* Based on scene_sad.asm, Copyright (C) 2018 Marton Balint
+;*
+;* This file is part of FFmpeg.
+;*
+;* FFmpeg is free software; you can redistribute it and/or
+;* modify it under the terms of the GNU Lesser General Public
+;* License as published by the Free Software Foundation; either
+;* version 2.1 of the License, or (at your option) any later version.
+;*
+;* FFmpeg is distributed in the hope that it will be useful,
+;* but WITHOUT ANY WARRANTY; without even the implied warranty of
+;* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;* Lesser General Public License for more details.
+;*
+;* You should have received a copy of the GNU Lesser General Public
+;* License along with FFmpeg; if not, write to the Free Software
+;* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+;******************************************************************************
+
+%include "libavutil/x86/x86util.asm"
+SECTION_RODATA
+uv_shuf:      db 0x00, 0x80, 0x80, 0x80, 0x02, 0x80, 0x80, 0x80
+              db 0x04, 0x80, 0x80, 0x80, 0x06, 0x80, 0x80, 0x80
+two_pof_10:   db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
+              db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
+%include "reciprocal.asm"
+
+SECTION .text
+
+;******************************************************************************
+;    sad
+;******************************************************************************
+%macro SAD 0
+cglobal sad, 6, 6, 3, src1, stride1, src2, stride2, block_size, sad
+    pxor       m2, m2
+
+.nextrow:
+    movu            m0, [src1q]
+    movu            m1, [src2q]
+    psadbw          m0, m1
+    paddq           m2, m0
+
+    add     src1q, stride1q
+    add     src2q, stride2q
+    sub     block_sizeq, 1
+    jg .nextrow
+
+    mov         r0q, sadq
+    movu      [r0q], m2      ; sum
+    REP_RET
+%endmacro
+
+
+INIT_XMM sse2
+SAD
+
+%if HAVE_AVX2_EXTERNAL
+
+INIT_YMM avx2
+SAD
+
+%endif
+
+
+
+
+;***********************************************************************************
+;  interpolate
+;***********************************************************************************
+%macro INTERPOLATE 0
+cglobal interpolate_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, alpha
+    pxor                m1, m1
+    pxor                m2, m2
+
+    movu            m3, [weight_tableq]
+    punpcklbw       m3, m2
+    punpcklwd       m3, m2
+    mova            m4, m3
+    movd            m1, alphad
+    pshufd          m1, m1, 0
+    pmulld          m3, m1
+    pslld           m4, 10
+    psubd           m4, m3
+    psrld           m3, 10
+    psrld           m4, 10
+    mova            m5, m3
+    paddd           m5, m4
+    movu            m0, [weightsq]
+    paddd           m5, m0
+    movu            [weightsq], m5
+
+    movu            m0, [src1q]
+    movu            m1, [src2q]
+    punpcklbw       m0, m2
+    punpcklbw       m1, m2
+    punpcklwd       m0, m1
+
+    packusdw        m3, m2
+    packusdw        m4, m2
+    punpcklwd       m4, m3
+
+    pmaddwd         m0, m4
+
+    movu            m1, [dstq]
+    paddd           m0, m1
+    movu            [dstq], m0
+    REP_RET
+%endmacro
+
+%macro INTERPOLATE_CHROMA 0
+cglobal interpolate_chroma_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, alpha
+    pxor                m1, m1
+    pxor                m2, m2
+
+    movu            m3, [weight_tableq]
+    mova            m4, [uv_shuf]
+    pshufb          m3, m4
+    mova            m4, m3
+    movd            m1, alphad
+    pshufd          m1, m1, 0
+    pmulld          m3, m1
+    pslld           m4, 10
+    psubd           m4, m3
+    psrld           m3, 10
+    psrld           m4, 10
+
+    movu            m0, [src1q]
+    movu            m1, [src2q]
+    punpcklbw       m0, m2
+    punpcklbw       m1, m2
+    punpcklwd       m0, m1
+
+    packusdw        m3, m2
+    packusdw        m4, m2
+    punpcklwd       m4, m3
+
+    pmaddwd         m0, m4
+
+    movu            m1, [dstq]
+    paddd           m0, m1
+    movu            [dstq], m0
+    REP_RET
+%endmacro
+
+
+;***********************************************************************************
+;  division
+;***********************************************************************************
+%macro DIVIDE_LUMA 0
+cglobal divide_luma_4_pixels, 3, 4, 3, dst, dividend, divisor, tmp
+    pxor            m0, m0
+    pxor            m2, m2
+
+    movu            m1, [dividendq]
+
+    mov           tmpq, [divisorq]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 0
+    
+    mov           tmpq, [divisorq+4]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 2
+    
+    mov           tmpq, [divisorq+8]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 4
+    
+    mov           tmpq, [divisorq+12]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 6
+
+    pmulld          m2, m1
+    psrld           m1, 1
+    paddd           m2, m1
+    psrld           m2, 16
+
+    packusdw        m2, m0
+    packuswb        m2, m0
+
+    movd         [dstq], m2
+
+    REP_RET
+%endmacro
+
+%macro DIVIDE_CHROMA 0
+cglobal divide_chroma_4_pixels, 3, 4, 3, dst, dividend, divisor, tmp
+    pxor            m0, m0
+    pxor            m2, m2
+
+    movu            m1, [dividendq]
+
+    mov           tmpq, [divisorq]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 0
+    
+    mov           tmpq, [divisorq+8]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 2
+    
+    mov           tmpq, [divisorq+16]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 4
+    
+    mov           tmpq, [divisorq+24]
+    shl           tmpq, 1
+    add           tmpq, reciprocal
+    pinsrw          m2, [tmpq], 6
+
+    pmulld          m2, m1
+    psrld           m1, 1
+    paddd           m2, m1
+    psrld           m2, 16
+
+    packusdw        m2, m0
+    packuswb        m2, m0
+
+    movd         [dstq], m2
+
+    REP_RET
+%endmacro
+
+;***********************************************************************************
+;  check value (0/1024) 
+;  if weight == 0 or weight > 1023 
+;  then return 1
+;  else return 0
+;***********************************************************************************
+%macro CHECK_WEIGHT 0
+cglobal check_weight_4_pixels, 2, 2, 3, weights, ret
+    pxor              m0, m0
+    mova              m1, [two_pof_10]
+
+    movu              m2, [weightsq]
+    pcmpeqd           m0, m2
+    je           .return1
+    pcmpgtd           m1, m2
+    jg           .return1
+    mov  dword    [retq], 0
+.finish:
+    REP_RET
+
+.return1:
+    mov  dword    [retq], 1
+    jmp          .finish
+
+%endmacro
+
+INIT_XMM sse4
+INTERPOLATE
+INTERPOLATE_CHROMA
+DIVIDE_LUMA
+DIVIDE_CHROMA
+CHECK_WEIGHT
+
+%if HAVE_AVX2_EXTERNAL
+
+;INIT_YMM avx2
+;INTERPOLATE
+
+%endif
