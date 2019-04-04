@@ -152,31 +152,52 @@ cglobal interpolate_chroma_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_t
 ;  division
 ;***********************************************************************************
 %macro DIVIDE_LUMA 0
-cglobal divide_luma_4_pixels, 3, 4, 3, dst, dividend, divisor, tmp
+cglobal divide_luma_4_pixels, 3, 5, 3, dst, dividend, divisor, tmp, addr
     pxor            m0, m0
     pxor            m2, m2
 
     movu            m1, [dividendq]
 
-    mov           tmpq, [divisorq]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 0
-    
-    mov           tmpq, [divisorq+4]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 2
-    
-    mov           tmpq, [divisorq+8]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 4
-    
-    mov           tmpq, [divisorq+12]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 6
+;    mov           tmpq, [divisorq]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 0
+;    
+;    mov           tmpq, [divisorq+4]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 2
+;    
+;    mov           tmpq, [divisorq+8]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 4
+;    
+;    mov           tmpq, [divisorq+12]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 6
+
+    xor           tmpq, tmpq
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 0
+
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq+4]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 2
+
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq+8]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 4
+
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq+12]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 6
 
     pmulld          m2, m1
     psrld           m1, 1
@@ -192,31 +213,52 @@ cglobal divide_luma_4_pixels, 3, 4, 3, dst, dividend, divisor, tmp
 %endmacro
 
 %macro DIVIDE_CHROMA 0
-cglobal divide_chroma_4_pixels, 3, 4, 3, dst, dividend, divisor, tmp
+cglobal divide_chroma_4_pixels, 3, 5, 3, dst, dividend, divisor, tmp, addr
     pxor            m0, m0
     pxor            m2, m2
 
     movu            m1, [dividendq]
 
-    mov           tmpq, [divisorq]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 0
-    
-    mov           tmpq, [divisorq+8]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 2
-    
-    mov           tmpq, [divisorq+16]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 4
-    
-    mov           tmpq, [divisorq+24]
-    shl           tmpq, 1
-    add           tmpq, reciprocal
-    pinsrw          m2, [tmpq], 6
+;    mov           tmpq, [divisorq]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 0
+;    
+;    mov           tmpq, [divisorq+8]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 2
+;    
+;    mov           tmpq, [divisorq+16]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 4
+;    
+;    mov           tmpq, [divisorq+24]
+;    shl           tmpq, 1
+;    add           tmpq, reciprocal
+;    pinsrw          m2, [tmpq], 6
+
+    xor           tmpq, tmpq
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 0
+
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq+8]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 2
+
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq+16]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 4
+
+    mov          addrq, reciprocal
+    mov           tmpd, [divisorq+24]
+    lea          addrq, [addrq+2*tmpq]
+    pinsrw          m2, [addrq], 6
 
     pmulld          m2, m1
     psrld           m1, 1
