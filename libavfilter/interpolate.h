@@ -24,12 +24,25 @@
 #ifndef AVFILTER_INTERPOLATE_H
 #define AVFILTER_INTERPOLATE_H
 
+#define USE_NEW_INTERFACES 1
+
 #include "avfilter.h"
 /*******************    interpolate      *********************/
 #define INTERPOLATE_PARAMS uint32_t *dst, const uint8_t *src1, const uint8_t *src2, \
                          uint32_t *weights, const uint8_t *weight_table, int alpha
 
+typedef void (*interpolate_line_fun)(INTERPOLATE_PARAMS);
+
+#if USE_NEW_INTERFACES
+void init_interpolate_line_fun_list(interpolate_line_fun fun_list[], int depth);
+void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+#else
 void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride);
+#endif
+
 void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride);
 
 void average_weight_luma(uint8_t *pixels, uint32_t *weighted_pixels, uint32_t *weights, int width, int height);

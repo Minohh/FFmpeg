@@ -214,6 +214,7 @@ typedef struct MIContext {
     uint64_t time_mc;
     uint64_t time_fill_zero;
     uint64_t time_division;
+    interpolate_line_fun interpolate_line_fun_list[4];
 } MIContext;
 
 #define OFFSET(x) offsetof(MIContext, x)
@@ -435,6 +436,7 @@ static int config_input(AVFilterLink *inlink)
     }
 
     init_sad_fun_list(me_ctx->sad_fun_list, 8);
+    init_interpolate_line_fun_list(mi_ctx->interpolate_line_fun_list, 8);
     me_ctx->log2_mb_size = mi_ctx->log2_mb_size;
 
     ff_me_init_context(me_ctx, mi_ctx->mb_size, mi_ctx->search_param, width, height, 0, (mi_ctx->b_width - 1) << mi_ctx->log2_mb_size, 0, (mi_ctx->b_height - 1) << mi_ctx->log2_mb_size);
@@ -1026,8 +1028,13 @@ static void bidirectional_obmc(MIContext *mi_ctx, int alpha)
                     weight_ptr = mi_ctx->weights                    + pixel_pos;
 
                     if(plane == 0)
+#ifdef USE_NEW_INTERFACES
+                        interpolate_32x32(dst, src1, src2, weight_ptr,
+                                obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, mi_ctx->interpolate_line_fun_list);
+#else 
                         interpolate_32x32(dst, src1, src2, weight_ptr, 
                                 obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride);
+#endif
                     else{
                         interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
                                 obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + 32 * offset_y, alpha, stride);
@@ -1322,8 +1329,13 @@ static void bilateral_obmc(MIContext *mi_ctx, Block *block, int mb_x, int mb_y, 
         weight_ptr = mi_ctx->weights                    + pixel_pos;
 
         if(plane == 0)
+#ifdef USE_NEW_INTERFACES
+            interpolate_32x32(dst, src1, src2, weight_ptr,
+                    obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, mi_ctx->interpolate_line_fun_list);
+#else 
             interpolate_32x32(dst, src1, src2, weight_ptr,
                     obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride);
+#endif
         else{
             interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
                     obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + offset_y * 32, alpha, stride);

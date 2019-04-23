@@ -23,11 +23,15 @@
 ;******************************************************************************
 
 %include "libavutil/x86/x86util.asm"
-SECTION_RODATA
+SECTION_RODATA 32
 uv_shuf:      db 0x00, 0x80, 0x80, 0x80, 0x02, 0x80, 0x80, 0x80
               db 0x04, 0x80, 0x80, 0x80, 0x06, 0x80, 0x80, 0x80
 two_pof_10:   db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
               db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
+luma_shuf:    db 0x00, 0x80, 0x80, 0x80, 0x01, 0x80, 0x80, 0x80
+              db 0x02, 0x80, 0x80, 0x80, 0x03, 0x80, 0x80, 0x80
+              db 0x04, 0x80, 0x80, 0x80, 0x05, 0x80, 0x80, 0x80
+              db 0x06, 0x80, 0x80, 0x80, 0x07, 0x80, 0x80, 0x80
 %include "reciprocal.asm"
 
 SECTION .text
@@ -72,7 +76,7 @@ SAD
 ;***********************************************************************************
 ;  interpolate
 ;***********************************************************************************
-%macro INTERPOLATE 0
+%macro INTERPOLATE_SSE4 0
 cglobal interpolate_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, alpha
     pxor                m1, m1
     pxor                m2, m2
@@ -111,6 +115,53 @@ cglobal interpolate_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, a
     movu            [dstq], m0
     REP_RET
 %endmacro
+
+%macro INTERPOLATE_AVX2 0
+cglobal interpolate_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, alpha
+    pxor                m1, m1
+    pxor                m2, m2
+
+    movu            m3, [weight_tableq]
+    vpermq          m3, m3, 0
+    mova            m6, [luma_shuf]
+    pshufb          m3, m3, m6
+ 
+    mova            m4, m3
+    
+    movd           xm1, alphad
+    vpbroadcastd    m1, xm1
+    
+    pmulld          m3, m1
+    pslld           m4, 10
+    psubd           m4, m3
+    psrld           m3, 10
+    psrld           m4, 10
+    mova            m5, m3
+    paddd           m5, m4
+    movu            m0, [weightsq]
+    paddd           m5, m0
+    movu            [weightsq], m5
+
+    movu            m0, [src1q]
+    movu            m1, [src2q]
+    vpermq          m0, m0, 0
+    vpermq          m1, m1, 0
+    pshufb          m0, m0, m6
+    pshufb          m1, m1, m6
+    pslld           m0, 16
+    paddd           m0, m1
+
+    pslld           m3, 16
+    paddd           m4, m3
+
+    pmaddwd         m0, m4
+
+    movu            m1, [dstq]
+    paddd           m0, m1
+    movu            [dstq], m0
+    REP_RET
+%endmacro
+
 
 %macro INTERPOLATE_CHROMA 0
 cglobal interpolate_chroma_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, alpha
@@ -300,7 +351,7 @@ cglobal check_weight_4_pixels, 2, 2, 3, weights, ret
 %endmacro
 
 INIT_XMM sse4
-INTERPOLATE
+INTERPOLATE_SSE4
 INTERPOLATE_CHROMA
 DIVIDE_LUMA
 DIVIDE_CHROMA
@@ -308,7 +359,7 @@ CHECK_WEIGHT
 
 %if HAVE_AVX2_EXTERNAL
 
-;INIT_YMM avx2
-;INTERPOLATE
+INIT_YMM avx2
+INTERPOLATE_AVX2
 
 %endif
