@@ -1027,18 +1027,25 @@ static void bidirectional_obmc(MIContext *mi_ctx, int alpha)
                     dst        = mi_ctx->temp[plane]                + pixel_pos;
                     weight_ptr = mi_ctx->weights                    + pixel_pos;
 
-                    if(plane == 0)
 #ifdef USE_NEW_INTERFACES
+                    if(plane == 0)
                         interpolate_32x32(dst, src1, src2, weight_ptr,
-                                obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, mi_ctx->interpolate_line_fun_list);
+                                obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, 
+                                mi_ctx->interpolate_line_fun_list);
+                    else{
+                        interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
+                                obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + 32 * offset_y, alpha, stride,
+                                mi_ctx->interpolate_line_fun_list);
+                    }
 #else 
+                    if(plane == 0)
                         interpolate_32x32(dst, src1, src2, weight_ptr, 
                                 obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride);
-#endif
                     else{
                         interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
                                 obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + 32 * offset_y, alpha, stride);
                     }
+#endif
                 }
 
             }
@@ -1328,18 +1335,24 @@ static void bilateral_obmc(MIContext *mi_ctx, Block *block, int mb_x, int mb_y, 
         dst        = mi_ctx->temp[plane]                + pixel_pos;
         weight_ptr = mi_ctx->weights                    + pixel_pos;
 
-        if(plane == 0)
 #ifdef USE_NEW_INTERFACES
+        if(plane == 0)
             interpolate_32x32(dst, src1, src2, weight_ptr,
                     obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, mi_ctx->interpolate_line_fun_list);
+        else{
+            interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
+                    obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + offset_y * 32, alpha, stride,
+                    mi_ctx->interpolate_line_fun_list);
+        }
 #else 
+        if(plane == 0)
             interpolate_32x32(dst, src1, src2, weight_ptr,
                     obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride);
-#endif
         else{
             interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
                     obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + offset_y * 32, alpha, stride);
         }
+#endif
     }
 }
 

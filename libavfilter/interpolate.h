@@ -35,15 +35,23 @@ typedef void (*interpolate_line_fun)(INTERPOLATE_PARAMS);
 
 #if USE_NEW_INTERFACES
 void init_interpolate_line_fun_list(interpolate_line_fun fun_list[], int depth);
+
 void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
 void interpolate_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
 void interpolate_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
 void interpolate_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+
+void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_chroma_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_chroma_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_chroma_2x2(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+
 #else
 void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride);
+void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride);
+
 #endif
 
-void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride);
 
 void average_weight_luma(uint8_t *pixels, uint32_t *weighted_pixels, uint32_t *weights, int width, int height);
 void average_weight_chroma(uint8_t *pixels, uint32_t *weighted_pixels, uint32_t *weights, int uv_width, int uv_height);
