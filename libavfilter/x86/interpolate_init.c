@@ -168,20 +168,20 @@ static void FUNC_NAME(INTERPOLATE_PARAMS) {                                   \
     int32_t x;                                                                \
     for (x = 0; x < LINESIZE; x+=step_len) {                                  \
         ASM_FUNC_NAME(dst+x, src1+x, src2+x,                                  \
-                weights+x, weight_table+x, alpha);                            \
+                weights+x, weight_table+2*x, alpha);                          \
     }                                                                         \
 }                                                                             \
 
 #if HAVE_X86ASM
 void ff_interpolate_chroma_4_pixels_sse4 (INTERPOLATE_PARAMS);
-INTERPOLATE_LINE_FUNC(interpolate_chroma_line_16_pixels_sse4, ff_interpolate_chroma_4_pixels_sse4, 16, 16);
-INTERPOLATE_LINE_FUNC(interpolate_chroma_line_8_pixels_sse4, ff_interpolate_chroma_4_pixels_sse4, 16, 8);
-INTERPOLATE_LINE_FUNC(interpolate_chroma_line_4_pixels_sse4, ff_interpolate_chroma_4_pixels_sse4, 16, 4);
+INTERPOLATE_CHROMA_LINE_FUNC(interpolate_chroma_line_16_pixels_sse4, ff_interpolate_chroma_4_pixels_sse4, 16, 16);
+INTERPOLATE_CHROMA_LINE_FUNC(interpolate_chroma_line_8_pixels_sse4, ff_interpolate_chroma_4_pixels_sse4, 16, 8);
+INTERPOLATE_CHROMA_LINE_FUNC(interpolate_chroma_line_4_pixels_sse4, ff_interpolate_chroma_4_pixels_sse4, 16, 4);
 
 #if HAVE_AVX2_EXTERNAL
 void ff_interpolate_chroma_8_pixels_avx2 (INTERPOLATE_PARAMS);
-INTERPOLATE_LINE_FUNC(interpolate_chroma_line_16_pixels_avx2, ff_interpolate_chroma_8_pixels_avx2, 32, 16);
-INTERPOLATE_LINE_FUNC(interpolate_chroma_line_8_pixels_avx2, ff_interpolate_chroma_8_pixels_avx2, 32, 8);
+INTERPOLATE_CHROMA_LINE_FUNC(interpolate_chroma_line_16_pixels_avx2, ff_interpolate_chroma_8_pixels_avx2, 32, 16);
+INTERPOLATE_CHROMA_LINE_FUNC(interpolate_chroma_line_8_pixels_avx2, ff_interpolate_chroma_8_pixels_avx2, 32, 8);
 #endif
 
 #endif
@@ -396,8 +396,8 @@ void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride)
                     weights+offset, weight_table + offset_w, alpha);
         }
 }
-
 #endif
+
 
 void ff_divide_luma_4_pixels_sse4(uint8_t *Q, uint32_t *dividend, uint32_t *divisor);
 

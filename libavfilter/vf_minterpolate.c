@@ -436,7 +436,9 @@ static int config_input(AVFilterLink *inlink)
     }
 
     init_sad_fun_list(me_ctx->sad_fun_list, 8);
+#if USE_NEW_INTERFACES
     init_interpolate_line_fun_list(mi_ctx->interpolate_line_fun_list, 8);
+#endif
     me_ctx->log2_mb_size = mi_ctx->log2_mb_size;
 
     ff_me_init_context(me_ctx, mi_ctx->mb_size, mi_ctx->search_param, width, height, 0, (mi_ctx->b_width - 1) << mi_ctx->log2_mb_size, 0, (mi_ctx->b_height - 1) << mi_ctx->log2_mb_size);
@@ -1027,7 +1029,7 @@ static void bidirectional_obmc(MIContext *mi_ctx, int alpha)
                     dst        = mi_ctx->temp[plane]                + pixel_pos;
                     weight_ptr = mi_ctx->weights                    + pixel_pos;
 
-#ifdef USE_NEW_INTERFACES
+#if USE_NEW_INTERFACES
                     if(plane == 0)
                         interpolate_32x32(dst, src1, src2, weight_ptr,
                                 obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, 
@@ -1335,7 +1337,7 @@ static void bilateral_obmc(MIContext *mi_ctx, Block *block, int mb_x, int mb_y, 
         dst        = mi_ctx->temp[plane]                + pixel_pos;
         weight_ptr = mi_ctx->weights                    + pixel_pos;
 
-#ifdef USE_NEW_INTERFACES
+#if USE_NEW_INTERFACES
         if(plane == 0)
             interpolate_32x32(dst, src1, src2, weight_ptr,
                     obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, mi_ctx->interpolate_line_fun_list);
