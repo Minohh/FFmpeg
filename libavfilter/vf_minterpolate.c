@@ -214,7 +214,7 @@ typedef struct MIContext {
     uint64_t time_mc;
     uint64_t time_fill_zero;
     uint64_t time_division;
-    interpolate_line_fun interpolate_line_fun_list[4];
+    interpolate_line_fun interpolate_line_fun_list[8];
 } MIContext;
 
 #define OFFSET(x) offsetof(MIContext, x)
