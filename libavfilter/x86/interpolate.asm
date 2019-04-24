@@ -1,5 +1,5 @@
 ;*****************************************************************************
-;* x86-optimized functions for scene SAD
+;* x86-optimized functions for motion interpolation
 ;*
 ;* Copyright (C) 2019 Minohh
 ;*
@@ -26,7 +26,11 @@
 SECTION_RODATA 32
 uv_shuf:      db 0x00, 0x80, 0x80, 0x80, 0x02, 0x80, 0x80, 0x80
               db 0x04, 0x80, 0x80, 0x80, 0x06, 0x80, 0x80, 0x80
+              db 0x08, 0x80, 0x80, 0x80, 0x0a, 0x80, 0x80, 0x80
+              db 0x0c, 0x80, 0x80, 0x80, 0x0e, 0x80, 0x80, 0x80
 two_pof_10:   db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
+              db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
+              db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
               db 0xff, 0x03, 0x00, 0x00, 0xff, 0x03, 0x00, 0x00
 luma_shuf:    db 0x00, 0x80, 0x80, 0x80, 0x01, 0x80, 0x80, 0x80
               db 0x02, 0x80, 0x80, 0x80, 0x03, 0x80, 0x80, 0x80
@@ -78,8 +82,8 @@ SAD
 ;***********************************************************************************
 %macro INTERPOLATE_SSE4 0
 cglobal interpolate_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, alpha
-    pxor                m1, m1
-    pxor                m2, m2
+    pxor            m1, m1
+    pxor            m2, m2
 
     movu            m3, [weight_tableq]
     punpcklbw       m3, m2
@@ -118,8 +122,8 @@ cglobal interpolate_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, a
 
 %macro INTERPOLATE_AVX2 0
 cglobal interpolate_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, alpha
-    pxor                m1, m1
-    pxor                m2, m2
+    pxor            m1, m1
+    pxor            m2, m2
 
     movu            m3, [weight_tableq]
     vpermq          m3, m3, 0
@@ -163,10 +167,10 @@ cglobal interpolate_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, a
 %endmacro
 
 
-%macro INTERPOLATE_CHROMA 0
+%macro INTERPOLATE_CHROMA_SSE4 0
 cglobal interpolate_chroma_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, alpha
-    pxor                m1, m1
-    pxor                m2, m2
+    pxor            m1, m1
+    pxor            m2, m2
 
     movu            m3, [weight_tableq]
     mova            m4, [uv_shuf]
@@ -198,6 +202,48 @@ cglobal interpolate_chroma_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_t
     REP_RET
 %endmacro
 
+
+%macro INTERPOLATE_CHROMA_AVX2 0
+cglobal interpolate_chroma_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, alpha
+    pxor            m1, m1
+    pxor            m2, m2
+
+    movu            m3, [weight_tableq]
+    vpermq          m3, m3, 01000100b
+    mova            m6, [uv_shuf]
+    pshufb          m3, m3, m6
+ 
+    mova            m4, m3
+    
+    movd           xm1, alphad
+    vpbroadcastd    m1, xm1
+    
+    pmulld          m3, m1
+    pslld           m4, 10
+    psubd           m4, m3
+    psrld           m3, 10
+    psrld           m4, 10
+
+    mova            m6, [luma_shuf]
+    movu            m0, [src1q]
+    movu            m1, [src2q]
+    vpermq          m0, m0, 0
+    vpermq          m1, m1, 0
+    pshufb          m0, m0, m6
+    pshufb          m1, m1, m6
+    pslld           m0, 16
+    paddd           m0, m1
+
+    pslld           m3, 16
+    paddd           m4, m3
+
+    pmaddwd         m0, m4
+
+    movu            m1, [dstq]
+    paddd           m0, m1
+    movu            [dstq], m0
+    REP_RET
+%endmacro
 
 ;***********************************************************************************
 ;  division
@@ -352,7 +398,7 @@ cglobal check_weight_4_pixels, 2, 2, 3, weights, ret
 
 INIT_XMM sse4
 INTERPOLATE_SSE4
-INTERPOLATE_CHROMA
+INTERPOLATE_CHROMA_SSE4
 DIVIDE_LUMA
 DIVIDE_CHROMA
 CHECK_WEIGHT
@@ -361,5 +407,6 @@ CHECK_WEIGHT
 
 INIT_YMM avx2
 INTERPOLATE_AVX2
+INTERPOLATE_CHROMA_AVX2
 
 %endif
