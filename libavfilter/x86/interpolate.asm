@@ -152,7 +152,7 @@ cglobal interpolate_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, a
     vpermq          m1, m1, 0
     pshufb          m0, m0, m6
     pshufb          m1, m1, m6
-    pslld           m0, 16
+    pslld           m1, 16
     paddd           m0, m1
 
     pslld           m3, 16
@@ -231,7 +231,7 @@ cglobal interpolate_chroma_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_t
     vpermq          m1, m1, 0
     pshufb          m0, m0, m6
     pshufb          m1, m1, m6
-    pslld           m0, 16
+    pslld           m1, 16
     paddd           m0, m1
 
     pslld           m3, 16
