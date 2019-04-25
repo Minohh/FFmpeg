@@ -89,15 +89,15 @@ void init_sad_fn_list(sad_fn sad_list[], int depth)
     sad_list[3] = c_sad_4x4;
 #if HAVE_X86ASM
     int cpu_flags = av_get_cpu_flags();
-    if (depth == 8) {
-#if HAVE_AVX2_EXTERNAL
-        if (EXTERNAL_AVX2_FAST(cpu_flags))
-            sad_list[0] = sad_32x32;
-#endif
-        if (EXTERNAL_SSE2(cpu_flags)) {
+    if(depth == 8) {
+        if(EXTERNAL_SSE2(cpu_flags)) {
             sad_list[0] = sad_4_16x16;
             sad_list[1] = sad_16x16;
         }
+#if HAVE_AVX2_EXTERNAL
+        if(EXTERNAL_AVX2_FAST(cpu_flags))
+            sad_list[0] = sad_32x32;
+#endif
     }
 #endif
 }
@@ -222,8 +222,8 @@ void init_interpolate_line_fn_list(interpolate_line_fn fn_list[], int depth)
     fn_list[7] = c_interpolate_chroma_line_2_pixels;
 #if HAVE_X86ASM
     int cpu_flags = av_get_cpu_flags();
-    if (depth == 8) {
-        if (EXTERNAL_SSE4(cpu_flags)) {
+    if(depth == 8) {
+        if(EXTERNAL_SSE4(cpu_flags)) {
             fn_list[0] = interpolate_line_32_pixels_sse4;
             fn_list[1] = interpolate_line_16_pixels_sse4;
             fn_list[2] = interpolate_line_8_pixels_sse4;
@@ -234,13 +234,14 @@ void init_interpolate_line_fn_list(interpolate_line_fn fn_list[], int depth)
             fn_list[6] = interpolate_chroma_line_4_pixels_sse4;
         }
 #if HAVE_AVX2_EXTERNAL
-        if (EXTERNAL_AVX2_FAST(cpu_flags))
+        if(EXTERNAL_AVX2_FAST(cpu_flags)) {
             fn_list[0] = interpolate_line_32_pixels_avx2;
             fn_list[1] = interpolate_line_16_pixels_avx2;
             fn_list[2] = interpolate_line_8_pixels_avx2;
 
             fn_list[4] = interpolate_chroma_line_16_pixels_avx2;
             fn_list[5] = interpolate_chroma_line_8_pixels_avx2;
+        }
 #endif
     }
 #endif
@@ -459,11 +460,16 @@ int init_check_weight_fn(check_weight_fn *fn)
     int ret = 1;
     *fn = c_check_weight_1_pixel;
 #if HAVE_X86ASM
-    *fn = check_weight_4_pixels;
-    ret = 4;
+    int cpu_flags = av_get_cpu_flags();
+    if(EXTERNAL_SSE4(cpu_flags)) {
+      *fn = check_weight_4_pixels;
+      ret = 4;
+    }
 #if HAVE_AVX2_EXTERNAL
-    *fn = check_weight_8_pixels;
-    ret = 8;
+    if(EXTERNAL_AVX2_FAST(cpu_flags)) {
+      *fn = check_weight_8_pixels;
+      ret = 8;
+    }
 #endif
 #endif
     return ret;

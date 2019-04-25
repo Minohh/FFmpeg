@@ -378,16 +378,17 @@ cglobal divide_chroma_4_pixels, 3, 5, 3, dst, dividend, divisor, tmp, addr
 ;***********************************************************************************
 %macro CHECK_WEIGHT 1
 cglobal check_weight_%1_pixels, 2, 4, 3, weights, ret, one, tmp
-    pxor              m0, m0
+;    pxor              m0, m0
     xor             tmpd, tmpd
     mov             oned, 1
-    mova              m1, [two_pof_10]
+;    mova              m1, [two_pof_10]
 
     movu              m2, [weightsq]
-    pcmpeqd           m0, m2
-    cmove           tmpd, oned
-    pcmpgtd           m1, m2
-    cmovg           tmpd, oned
+    ptest             m2, m2
+    cmovz           tmpd, oned
+    psrld             m2, 10
+    ptest             m2, m2 
+    cmovnz          tmpd, oned
     mov           [retq], tmpd
 
     REP_RET
