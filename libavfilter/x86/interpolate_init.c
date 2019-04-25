@@ -81,7 +81,7 @@ C_SAD_FUNC(4)
 /***************************************************************************/
 /*    init function                                                        */
 /***************************************************************************/
-void init_sad_fun_list(sad_fun sad_list[], int depth)
+void init_sad_fn_list(sad_fn sad_list[], int depth)
 {
     sad_list[0] = c_sad_32x32;
     sad_list[1] = c_sad_16x16;
@@ -207,40 +207,40 @@ C_INTERPOLATE_CHROMA_LINE_FUNC(2)
 /***************************************************************************/
 /*    init function                                                        */
 /***************************************************************************/
-void init_interpolate_line_fun_list(interpolate_line_fun fun_list[], int depth)
+void init_interpolate_line_fn_list(interpolate_line_fn fn_list[], int depth)
 {
     /* 0,1,2,3 for luma */
     /* 4,5,6,7 for chroma */
-    fun_list[0] = c_interpolate_line_32_pixels;
-    fun_list[1] = c_interpolate_line_16_pixels;
-    fun_list[2] = c_interpolate_line_8_pixels;
-    fun_list[3] = c_interpolate_line_4_pixels;
+    fn_list[0] = c_interpolate_line_32_pixels;
+    fn_list[1] = c_interpolate_line_16_pixels;
+    fn_list[2] = c_interpolate_line_8_pixels;
+    fn_list[3] = c_interpolate_line_4_pixels;
     
-    fun_list[4] = c_interpolate_chroma_line_16_pixels;
-    fun_list[5] = c_interpolate_chroma_line_8_pixels;
-    fun_list[6] = c_interpolate_chroma_line_4_pixels;
-    fun_list[7] = c_interpolate_chroma_line_2_pixels;
+    fn_list[4] = c_interpolate_chroma_line_16_pixels;
+    fn_list[5] = c_interpolate_chroma_line_8_pixels;
+    fn_list[6] = c_interpolate_chroma_line_4_pixels;
+    fn_list[7] = c_interpolate_chroma_line_2_pixels;
 #if HAVE_X86ASM
     int cpu_flags = av_get_cpu_flags();
     if (depth == 8) {
         if (EXTERNAL_SSE4(cpu_flags)) {
-            fun_list[0] = interpolate_line_32_pixels_sse4;
-            fun_list[1] = interpolate_line_16_pixels_sse4;
-            fun_list[2] = interpolate_line_8_pixels_sse4;
-            fun_list[3] = interpolate_line_4_pixels_sse4;
+            fn_list[0] = interpolate_line_32_pixels_sse4;
+            fn_list[1] = interpolate_line_16_pixels_sse4;
+            fn_list[2] = interpolate_line_8_pixels_sse4;
+            fn_list[3] = interpolate_line_4_pixels_sse4;
             
-            fun_list[4] = interpolate_chroma_line_16_pixels_sse4;
-            fun_list[5] = interpolate_chroma_line_8_pixels_sse4;
-            fun_list[6] = interpolate_chroma_line_4_pixels_sse4;
+            fn_list[4] = interpolate_chroma_line_16_pixels_sse4;
+            fn_list[5] = interpolate_chroma_line_8_pixels_sse4;
+            fn_list[6] = interpolate_chroma_line_4_pixels_sse4;
         }
 #if HAVE_AVX2_EXTERNAL
         if (EXTERNAL_AVX2_FAST(cpu_flags))
-            fun_list[0] = interpolate_line_32_pixels_avx2;
-            fun_list[1] = interpolate_line_16_pixels_avx2;
-            fun_list[2] = interpolate_line_8_pixels_avx2;
+            fn_list[0] = interpolate_line_32_pixels_avx2;
+            fn_list[1] = interpolate_line_16_pixels_avx2;
+            fn_list[2] = interpolate_line_8_pixels_avx2;
 
-            fun_list[4] = interpolate_chroma_line_16_pixels_avx2;
-            fun_list[5] = interpolate_chroma_line_8_pixels_avx2;
+            fn_list[4] = interpolate_chroma_line_16_pixels_avx2;
+            fn_list[5] = interpolate_chroma_line_8_pixels_avx2;
 #endif
     }
 #endif
@@ -249,50 +249,50 @@ void init_interpolate_line_fun_list(interpolate_line_fun fun_list[], int depth)
 /*************************************************************************/
 /****   luma block interpolateion                                    *****/
 /*************************************************************************/
-void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
     for(y = 0; y < 32; y++) {
         offset   = y * stride;
         offset_w = y * 32;
-        fun_list[0](dst + offset, src1 + offset, src2 + offset,
+        fn_list[0](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
 
-void interpolate_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
     for(y = 0; y < 16; y++) {
         offset   = y * stride;
         offset_w = y * 16;
-        fun_list[1](dst + offset, src1 + offset, src2 + offset,
+        fn_list[1](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
 
-void interpolate_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
     for(y = 0; y < 8; y++) {
         offset   = y * stride;
         offset_w = y * 8;
-        fun_list[2](dst + offset, src1 + offset, src2 + offset,
+        fn_list[2](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
 
-void interpolate_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
     for(y = 0; y < 4; y++) {
         offset   = y * stride;
         offset_w = y * 4;
-        fun_list[3](dst + offset, src1 + offset, src2 + offset,
+        fn_list[3](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
@@ -301,7 +301,7 @@ void interpolate_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun 
 /**** chroma block interpolateion                                    *****/
 /*************************************************************************/
 /* chroma don't need the weights parameter , weight_table is enough      */
-void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
@@ -315,12 +315,12 @@ void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_
         /* for yuv420 */
         offset_w = y * (32 * 2);
 
-        fun_list[4](dst + offset, src1 + offset, src2 + offset,
+        fn_list[4](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
 
-void interpolate_chroma_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_chroma_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
@@ -330,12 +330,12 @@ void interpolate_chroma_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_li
         /* for yuv420 */
         offset_w = y * (16 * 2);
 
-        fun_list[5](dst + offset, src1 + offset, src2 + offset,
+        fn_list[5](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
 
-void interpolate_chroma_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_chroma_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
@@ -345,12 +345,12 @@ void interpolate_chroma_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_li
         /* for yuv420 */
         offset_w = y * (8 * 2);
 
-        fun_list[6](dst + offset, src1 + offset, src2 + offset,
+        fn_list[6](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
 
-void interpolate_chroma_2x2(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[])
+void interpolate_chroma_2x2(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[])
 {
     int y;
     int offset, offset_w;
@@ -360,11 +360,10 @@ void interpolate_chroma_2x2(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_li
         /* for yuv420 */
         offset_w = y * (4 * 2);
 
-        fun_list[7](dst + offset, src1 + offset, src2 + offset,
+        fn_list[7](dst + offset, src1 + offset, src2 + offset,
                 weights + offset, weight_table + offset_w, alpha);
     }
 }
-
 #else
 void ff_interpolate_4_pixels_sse4(INTERPOLATE_PARAMS);
 
@@ -430,6 +429,47 @@ void average_weight_chroma(uint8_t *pixels, uint32_t *weighted_pixels, uint32_t 
 /***************************************************************************/
 /*    check weight function                                                */
 /***************************************************************************/
+#if USE_NEW_INTERFACES
+
+#define CHECK_WEIGHT_FUNC(FUNC_NAME, ASM_FUNC_NAME)                         \
+int ASM_FUNC_NAME(uint32_t *weights, int* ret);                             \
+static int FUNC_NAME(uint32_t *weights)                                     \
+{                                                                           \
+    int ret;                                                                \
+    ASM_FUNC_NAME(weights, &ret);                                           \
+    return ret;                                                             \
+}                                                                           \
+
+static int c_check_weight_1_pixel(uint32_t *weights)
+{
+    if(*weights == 0 || *weights >= 1024)
+        return 1;
+    return 0;
+}
+
+#if HAVE_X86ASM
+CHECK_WEIGHT_FUNC(check_weight_4_pixels, ff_check_weight_4_pixels_sse4)
+#if HAVE_AVX2_EXTERNAL
+CHECK_WEIGHT_FUNC(check_weight_8_pixels, ff_check_weight_8_pixels_avx2)
+#endif
+#endif
+
+int init_check_weight_fn(check_weight_fn *fn)
+{
+    int ret = 1;
+    *fn = c_check_weight_1_pixel;
+#if HAVE_X86ASM
+    *fn = check_weight_4_pixels;
+    ret = 4;
+#if HAVE_AVX2_EXTERNAL
+    *fn = check_weight_8_pixels;
+    ret = 8;
+#endif
+#endif
+    return ret;
+}
+
+#else
 void ff_check_weight_4_pixels_sse4(uint32_t *weights, int *ret);
 
 int check_weight_4_pixels(uint32_t *weights)
@@ -438,3 +478,4 @@ int check_weight_4_pixels(uint32_t *weights)
     ff_check_weight_4_pixels_sse4(weights, &ret);
     return ret;
 }
+#endif

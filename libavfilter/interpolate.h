@@ -31,20 +31,21 @@
 #define INTERPOLATE_PARAMS uint32_t *dst, const uint8_t *src1, const uint8_t *src2, \
                          uint32_t *weights, const uint8_t *weight_table, int alpha
 
-typedef void (*interpolate_line_fun)(INTERPOLATE_PARAMS);
+typedef void (*interpolate_line_fn)(INTERPOLATE_PARAMS);
+typedef int (*check_weight_fn)(uint32_t *weights);
 
 #if USE_NEW_INTERFACES
-void init_interpolate_line_fun_list(interpolate_line_fun fun_list[], int depth);
+void init_interpolate_line_fn_list(interpolate_line_fn fn_list[], int depth);
 
-void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
-void interpolate_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
-void interpolate_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
-void interpolate_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
+void interpolate_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
+void interpolate_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
+void interpolate_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
 
-void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
-void interpolate_chroma_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
-void interpolate_chroma_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
-void interpolate_chroma_2x2(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fun fun_list[]);
+void interpolate_chroma_16x16(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
+void interpolate_chroma_8x8(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
+void interpolate_chroma_4x4(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
+void interpolate_chroma_2x2(INTERPOLATE_PARAMS, ptrdiff_t stride, interpolate_line_fn fn_list[]);
 
 #else
 void interpolate_32x32(INTERPOLATE_PARAMS, ptrdiff_t stride);
@@ -66,10 +67,15 @@ void ff_sad_c(SAD_PARAMS);
 
 void ff_sad16_c(SAD_PARAMS);
 
-typedef void (*sad_fun)(SAD_PARAMS);
+typedef void (*sad_fn)(SAD_PARAMS);
 
-void init_sad_fun_list(sad_fun sad_list[], int depth);
+void init_sad_fn_list(sad_fn sad_list[], int depth);
 
 /********************   check weights     ********************/
+#if USE_NEW_INTERFACES
+int init_check_weight_fn(check_weight_fn *fn);
+#else
 int check_weight_4_pixels(uint32_t *weights);
+#endif
+
 #endif /* AVFILTER_INTERPOLATE_H */

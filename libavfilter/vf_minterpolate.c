@@ -214,7 +214,10 @@ typedef struct MIContext {
     uint64_t time_mc;
     uint64_t time_fill_zero;
     uint64_t time_division;
-    interpolate_line_fun interpolate_line_fun_list[8];
+    int32_t check_step_len;
+    
+    interpolate_line_fn interpolate_line_fn_list[8];
+    check_weight_fn check_weight_pixels;
 } MIContext;
 
 #define OFFSET(x) offsetof(MIContext, x)
@@ -324,7 +327,7 @@ static uint64_t get_sbad_ob(AVMotionEstContext *me_ctx, int x, int y, int x_mv, 
     cur_pos = data_cur  + (y+mv_y-mb_size/2)*linesize + (x+mv_x-mb_size/2);
     ref_pos = data_next + (y-mv_y-mb_size/2)*linesize + (x-mv_x-mb_size/2);
 
-    me_ctx->sad_fun_list[4-me_ctx->log2_mb_size](cur_pos, linesize, ref_pos, linesize, 2*mb_size, &sbad);
+    me_ctx->sad_fn_list[4-me_ctx->log2_mb_size](cur_pos, linesize, ref_pos, linesize, 2*mb_size, &sbad);
     
     return sbad + (FFABS(mv_x1 - me_ctx->pred_x) + FFABS(mv_y1 - me_ctx->pred_y)) * COST_PRED_SCALE;
 }
@@ -352,7 +355,7 @@ static uint64_t get_sad_ob(AVMotionEstContext *me_ctx, int x, int y, int x_mv, i
     cur_pos = data_cur + (y-mb_size/2)*linesize + (x-mb_size/2);
     ref_pos = data_ref + (y_mv-mb_size/2)*linesize + (x_mv-mb_size/2);
     
-    me_ctx->sad_fun_list[4-me_ctx->log2_mb_size](cur_pos, linesize, ref_pos, linesize, 2*mb_size, &sad);
+    me_ctx->sad_fn_list[4-me_ctx->log2_mb_size](cur_pos, linesize, ref_pos, linesize, 2*mb_size, &sad);
 
     return sad + (FFABS(mv_x - me_ctx->pred_x) + FFABS(mv_y - me_ctx->pred_y)) * COST_PRED_SCALE;
 }
@@ -435,9 +438,10 @@ static int config_input(AVFilterLink *inlink)
             return AVERROR(EINVAL);
     }
 
-    init_sad_fun_list(me_ctx->sad_fun_list, 8);
+    init_sad_fn_list(me_ctx->sad_fn_list, 8);
 #if USE_NEW_INTERFACES
-    init_interpolate_line_fun_list(mi_ctx->interpolate_line_fun_list, 8);
+    init_interpolate_line_fn_list(mi_ctx->interpolate_line_fn_list, 8);
+    mi_ctx->check_step_len = init_check_weight_fn(&mi_ctx->check_weight_pixels);
 #endif
     me_ctx->log2_mb_size = mi_ctx->log2_mb_size;
 
@@ -1033,11 +1037,11 @@ static void bidirectional_obmc(MIContext *mi_ctx, int alpha)
                     if(plane == 0)
                         interpolate_32x32(dst, src1, src2, weight_ptr,
                                 obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, 
-                                mi_ctx->interpolate_line_fun_list);
+                                mi_ctx->interpolate_line_fn_list);
                     else{
                         interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
                                 obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + 32 * offset_y, alpha, stride,
-                                mi_ctx->interpolate_line_fun_list);
+                                mi_ctx->interpolate_line_fn_list);
                     }
 #else 
                     if(plane == 0)
@@ -1054,29 +1058,23 @@ static void bidirectional_obmc(MIContext *mi_ctx, int alpha)
     }
 }
 
-static void set_frame_data(MIContext *mi_ctx, int alpha, AVFrame *avf_out)
+static void check_frame_weights(MIContext *mi_ctx, int width, int height, int alpha)
 {
-    int x, y, plane;
+    int x, y;
     int pos, pos_uv;
-    int width = avf_out->width;
-    int height = avf_out->height;
-
-    int uv_width, uv_height;
+    int uv_skip;
+    int offset = 0;
     int n = 0;
     int m = 0;
     int i;
-    int uv_skip = 0;
-    uint64_t time;
+   
+    for (y = 0; y < height; y++) {
+        offset = y * width;
 
-    uv_height = height >> mi_ctx->log2_chroma_h;
-    uv_width  = width  >> mi_ctx->log2_chroma_w;
-
-    time = av_gettime_relative();
-    for (y = 0; y < height; y++)
-        for (x = 0; x < width; x+=4) {
-            pos = x + y * width;
-            if(check_weight_4_pixels(&mi_ctx->weights[pos])) {
-                for(i = 0; i < 4; i++) {
+        for (x = 0; x < width; x+=mi_ctx->check_step_len) {
+            pos = x + offset;
+            if(mi_ctx->check_weight_pixels(&mi_ctx->weights[pos])) {
+                for(i = 0; i < mi_ctx->check_step_len; i++) {
                     pos += i;
 
                     if(mi_ctx->log2_chroma_h & y || mi_ctx->log2_chroma_w & i) {
@@ -1117,13 +1115,34 @@ static void set_frame_data(MIContext *mi_ctx, int alpha, AVFrame *avf_out)
                 }
             }
         }
+    }
+#if 0
+    av_log(NULL, AV_LOG_INFO, "m = %d, n = %d\n", m, n);
+#endif
+}
+
+static void set_frame_data(MIContext *mi_ctx, int alpha, AVFrame *avf_out)
+{
+    int x, y, plane;
+    int pos, pos_uv;
+    int width = avf_out->width;
+    int height = avf_out->height;
+
+    int uv_width, uv_height;
+    int uv_skip = 0;
+    uint64_t time;
+
+    uv_height = height >> mi_ctx->log2_chroma_h;
+    uv_width  = width  >> mi_ctx->log2_chroma_w;
+
+    time = av_gettime_relative();
+    
+    check_frame_weights(mi_ctx, width, height, alpha);
+
     time = av_gettime_relative() - time;
     mi_ctx->time_fill_zero += time;
 
     time = av_gettime_relative();
-#if 0
-    av_log(NULL, AV_LOG_INFO, "m = %d, n = %d\n", m, n);
-#endif
 #if DIV_OPTIMIZE
     
     average_weight_luma(avf_out->data[0],
@@ -1340,11 +1359,11 @@ static void bilateral_obmc(MIContext *mi_ctx, Block *block, int mb_x, int mb_y, 
 #if USE_NEW_INTERFACES
         if(plane == 0)
             interpolate_32x32(dst, src1, src2, weight_ptr,
-                    obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, mi_ctx->interpolate_line_fun_list);
+                    obmc_tab_linear[4-mi_ctx->log2_mb_size], alpha, stride, mi_ctx->interpolate_line_fn_list);
         else{
             interpolate_chroma_16x16(dst, src1, src2, weight_ptr,
                     obmc_tab_linear[4-mi_ctx->log2_mb_size] + offset_x + offset_y * 32, alpha, stride,
-                    mi_ctx->interpolate_line_fun_list);
+                    mi_ctx->interpolate_line_fn_list);
         }
 #else 
         if(plane == 0)

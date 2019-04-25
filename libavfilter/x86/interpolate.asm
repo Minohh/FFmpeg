@@ -376,24 +376,21 @@ cglobal divide_chroma_4_pixels, 3, 5, 3, dst, dividend, divisor, tmp, addr
 ;  then return 1
 ;  else return 0
 ;***********************************************************************************
-%macro CHECK_WEIGHT 0
-cglobal check_weight_4_pixels, 2, 2, 3, weights, ret
+%macro CHECK_WEIGHT 1
+cglobal check_weight_%1_pixels, 2, 2, 4, weights, ret, one, tmp
     pxor              m0, m0
+    xor             tmpd, tmpd
+    mov             oned, 1
     mova              m1, [two_pof_10]
 
     movu              m2, [weightsq]
     pcmpeqd           m0, m2
-    je           .return1
+    cmove           tmpd, oned
     pcmpgtd           m1, m2
-    jg           .return1
-    mov  dword    [retq], 0
-.finish:
+    cmovg           tmpd, oned
+    mov           [retq], tmpd
+
     REP_RET
-
-.return1:
-    mov  dword    [retq], 1
-    jmp          .finish
-
 %endmacro
 
 INIT_XMM sse4
@@ -401,12 +398,13 @@ INTERPOLATE_SSE4
 INTERPOLATE_CHROMA_SSE4
 DIVIDE_LUMA
 DIVIDE_CHROMA
-CHECK_WEIGHT
+CHECK_WEIGHT 4
 
 %if HAVE_AVX2_EXTERNAL
 
 INIT_YMM avx2
 INTERPOLATE_AVX2
 INTERPOLATE_CHROMA_AVX2
+CHECK_WEIGHT 8
 
 %endif
