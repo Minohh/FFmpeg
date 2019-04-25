@@ -121,7 +121,7 @@ cglobal interpolate_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, a
 %endmacro
 
 %macro INTERPOLATE_AVX2 0
-cglobal interpolate_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, alpha
+cglobal interpolate_8_pixels, 6, 6, 7, dst, src1, src2, weights, weight_table, alpha
     pxor            m1, m1
     pxor            m2, m2
 
@@ -168,7 +168,7 @@ cglobal interpolate_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, a
 
 
 %macro INTERPOLATE_CHROMA_SSE4 0
-cglobal interpolate_chroma_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_table, alpha
+cglobal interpolate_chroma_4_pixels, 6, 6, 5, dst, src1, src2, weights, weight_table, alpha
     pxor            m1, m1
     pxor            m2, m2
 
@@ -204,14 +204,14 @@ cglobal interpolate_chroma_4_pixels, 6, 6, 6, dst, src1, src2, weights, weight_t
 
 
 %macro INTERPOLATE_CHROMA_AVX2 0
-cglobal interpolate_chroma_8_pixels, 6, 7, 7, dst, src1, src2, weights, weight_table, alpha
+cglobal interpolate_chroma_8_pixels, 6, 6, 7, dst, src1, src2, weights, weight_table, alpha
     pxor            m1, m1
     pxor            m2, m2
 
     movu            m3, [weight_tableq]
     vpermq          m3, m3, 01000100b
-    mova            m6, [uv_shuf]
-    pshufb          m3, m3, m6
+    mova            m5, [uv_shuf]
+    pshufb          m3, m3, m5
  
     mova            m4, m3
     
@@ -377,7 +377,7 @@ cglobal divide_chroma_4_pixels, 3, 5, 3, dst, dividend, divisor, tmp, addr
 ;  else return 0
 ;***********************************************************************************
 %macro CHECK_WEIGHT 1
-cglobal check_weight_%1_pixels, 2, 2, 4, weights, ret, one, tmp
+cglobal check_weight_%1_pixels, 2, 4, 3, weights, ret, one, tmp
     pxor              m0, m0
     xor             tmpd, tmpd
     mov             oned, 1
